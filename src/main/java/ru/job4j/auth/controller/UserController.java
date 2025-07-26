@@ -3,6 +3,7 @@ package ru.job4j.auth.controller;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import ru.job4j.auth.model.Person;
@@ -22,7 +23,7 @@ public class UserController {
     private final BCryptPasswordEncoder encoder;
 
     @PostMapping("/sign-up")
-    public void signUp(@RequestBody Person person) {
+    public ResponseEntity<Void> signUp(@RequestBody Person person) {
         var login = person.getLogin();
         var password = person.getPassword();
         if (login == null || password == null) {
@@ -33,11 +34,12 @@ public class UserController {
         }
         person.setPassword(encoder.encode(password));
         users.save(person);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/all")
-    public List<Person> findAll() {
-        return users.findAll();
+    public ResponseEntity<List<Person>> findAll() {
+        return ResponseEntity.ok(users.findAll());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
