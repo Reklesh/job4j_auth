@@ -38,6 +38,7 @@ public class WebSecurity {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.POST, SIGN_UP_URL).permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/person/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilter(jwtAuthFilter)

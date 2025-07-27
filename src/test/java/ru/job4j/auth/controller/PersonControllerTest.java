@@ -3,6 +3,7 @@ package ru.job4j.auth.controller;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 import ru.job4j.auth.model.Person;
 import ru.job4j.auth.repository.person.PersonRepository;
@@ -23,7 +24,7 @@ class PersonControllerTest {
     @BeforeEach
     public void initServices() {
         persons = mock(PersonRepository.class);
-        controller = new PersonController(persons);
+        controller = new PersonController(persons, new BCryptPasswordEncoder());
     }
 
     @Test

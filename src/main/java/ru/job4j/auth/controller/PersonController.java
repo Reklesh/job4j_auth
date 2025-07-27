@@ -3,8 +3,10 @@ package ru.job4j.auth.controller;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import ru.job4j.auth.dto.PersonDto;
 import ru.job4j.auth.model.Person;
 import ru.job4j.auth.repository.person.PersonRepository;
 
@@ -16,6 +18,7 @@ import java.util.List;
 public class PersonController {
 
     private final PersonRepository persons;
+    private final BCryptPasswordEncoder encoder;
 
     @GetMapping("/")
     public List<Person> findAll() {
@@ -55,6 +58,19 @@ public class PersonController {
         }
         this.persons.save(person);
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<Person> patch(@PathVariable int id, @RequestBody PersonDto dto) {
+        var person = this.persons.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (dto.getLogin() != null) {
+            person.setLogin(dto.getLogin());
+        }
+        if (dto.getPassword() != null) {
+            person.setPassword(encoder.encode(dto.getPassword()));
+        }
+        return ResponseEntity.ok(this.persons.save(person));
     }
 
     @DeleteMapping("/{id}")
