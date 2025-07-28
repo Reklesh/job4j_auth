@@ -4,8 +4,10 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import ru.job4j.auth.Operation;
 import ru.job4j.auth.dto.PersonDto;
 import ru.job4j.auth.model.Person;
 import ru.job4j.auth.repository.person.PersonRepository;
@@ -14,6 +16,7 @@ import java.util.List;
 
 @RestController
 @AllArgsConstructor
+@Validated
 @RequestMapping("/person")
 public class PersonController {
 
@@ -37,12 +40,7 @@ public class PersonController {
     }
 
     @PostMapping("/")
-    public ResponseEntity<Person> create(@RequestBody Person person) {
-        var login = person.getLogin();
-        var password = person.getPassword();
-        if (login == null || password == null) {
-            throw new NullPointerException("Username and password mustn't be empty");
-        }
+    public ResponseEntity<Person> create(@Validated(Operation.OnCreate.class) @RequestBody Person person) {
         return new ResponseEntity<>(
                 this.persons.save(person),
                 HttpStatus.CREATED
@@ -50,12 +48,7 @@ public class PersonController {
     }
 
     @PutMapping("/")
-    public ResponseEntity<Void> update(@RequestBody Person person) {
-        var login = person.getLogin();
-        var password = person.getPassword();
-        if (login == null || password == null) {
-            throw new NullPointerException("Username and password mustn't be empty");
-        }
+    public ResponseEntity<Void> update(@Validated(Operation.OnUpdate.class) @RequestBody Person person) {
         this.persons.save(person);
         return ResponseEntity.ok().build();
     }

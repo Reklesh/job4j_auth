@@ -1,66 +1,101 @@
 package ru.job4j.auth.controller;
 
-import org.junit.jupiter.api.BeforeEach;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import ru.job4j.auth.WebSecurity;
 import ru.job4j.auth.model.Person;
 import ru.job4j.auth.repository.person.MemoryUserRepository;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@WebMvcTest(UserController.class)
+@Import(WebSecurity.class)
 class UserControllerTest {
 
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockitoBean
     private MemoryUserRepository users;
-    private UserController controller;
 
-    @BeforeEach
-    public void initServices() {
-        users = mock(MemoryUserRepository.class);
-        controller = new UserController(users, new BCryptPasswordEncoder());
-    }
+    @MockitoBean
+    private BCryptPasswordEncoder encoder;
 
     @Test
-    public void whenSignUpWithValidPersonThenSaveSuccessfully() {
+    void whenSignUpWithValidDataThenReturnOk() throws Exception {
         var person = new Person();
         person.setLogin("admin");
         person.setPassword("password");
-        doNothing().when(users).save(any());
 
-        controller.signUp(person);
+        when(encoder.encode(anyString())).thenReturn("encodedPassword");
+        doNothing().when(users).save(any(Person.class));
 
-        verify(users).save(person);
+        mockMvc.perform(post("/users/sign-up")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(person)))
+                .andDo(print())
+                .andExpect(status().isOk());
     }
 
     @Test
-    public void whenSignUpWithoutPasswordThenThrowNullPointerException() {
+    void whenSignUpWithoutPasswordThenReturnBadRequest() throws Exception {
         var person = new Person();
         person.setLogin("admin");
 
-        assertThatThrownBy(() -> controller.signUp(person))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("Username and password mustn't be empty");
+        mockMvc.perform(post("/users/sign-up")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(person)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$[0].password").exists())
+                .andExpect(jsonPath("$[0].password")
+                        .value(containsString("Password must be empty")));
     }
 
     @Test
-    public void whenSignUpWithoutLoginThenThrowNullPointerException() {
+    void whenSignUpWithoutLoginThenReturnBadRequest() throws Exception {
         var person = new Person();
         person.setPassword("password");
 
-        assertThatThrownBy(() -> controller.signUp(person))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessageContaining("Username and password mustn't be empty");
+        mockMvc.perform(post("/users/sign-up")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(person)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$[0].login").exists())
+                .andExpect(jsonPath("$[0].login")
+                        .value(containsString("Username must be empty")));
     }
 
     @Test
-    public void whenSignUpWithShortPasswordThenThrowIllegalArgumentException() {
+    void whenSignUpWithShortPasswordThenReturnBadRequest() throws Exception {
         var person = new Person();
         person.setLogin("admin");
-        person.setPassword("passw");
+        person.setPassword("12345");
 
-        assertThatThrownBy(() -> controller.signUp(person))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Invalid password. Password length must be more than 5 characters.");
+        mockMvc.perform(post("/users/sign-up")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(person)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$[0].password").exists())
+                .andExpect(jsonPath("$[0].password")
+                        .value(containsString("Password length must be at least 6 characters")));
     }
 }
